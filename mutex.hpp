@@ -17,6 +17,14 @@
     #endif
 #endif
 
+#ifndef khmz_throw
+    #ifdef KHMZ_DISABLE_THROW
+        #define khmz_throw(e) do { } while (0)
+    #else
+        #define khmz_throw(e) throw (e)
+    #endif
+#endif
+
 namespace khmz
 {
     class mutex
@@ -28,7 +36,7 @@ namespace khmz
             : m_hMutex(CreateMutex(NULL, FALSE, NULL))
         {
             if (!m_hMutex)
-                throw std::runtime_error("Failed to create mutex at khmz::mutex::mutex");
+                khmz_throw(std::runtime_error("Failed to create mutex at khmz::mutex::mutex"));
         }
 
         ~mutex() khmz_noexcept
@@ -41,13 +49,13 @@ namespace khmz
         {
             DWORD dwWaitResult = WaitForSingleObject(m_hMutex, INFINITE);
             if (dwWaitResult != WAIT_OBJECT_0)
-                throw std::runtime_error("Failed to lock mutex at khmz::mutex::lock");
+                khmz_throw(std::runtime_error("Failed to lock mutex at khmz::mutex::lock"));
         }
 
         void unlock()
         {
             if (!ReleaseMutex(m_hMutex))
-                throw std::runtime_error("Failed to release mutex at khmz::mutex::unlock");
+                khmz_throw(std::runtime_error("Failed to release mutex at khmz::mutex::unlock"));
         }
 
         bool try_lock() khmz_noexcept
@@ -171,23 +179,27 @@ namespace khmz
         void lock()
         {
             if (m_owns_lock)
-                throw std::runtime_error("Lock already owned at khmz::unique_lock::lock");
+                khmz_throw(std::runtime_error("Lock already owned at khmz::unique_lock::lock"));
+#ifndef KHMZ_DISABLE_THROW
             try
             {
+#endif
                 m_mutex->lock();
                 m_owns_lock = true;
+#ifndef KHMZ_DISABLE_THROW
             }
             catch (...)
             {
                 m_owns_lock = false;
                 throw;
             }
+#endif
         }
 
         bool try_lock()
         {
             if (m_owns_lock)
-                throw std::runtime_error("Lock already owned at khmz::unique_lock::try_lock");
+                khmz_throw(std::runtime_error("Lock already owned at khmz::unique_lock::try_lock"));
             m_owns_lock = m_mutex->try_lock();
             return m_owns_lock;
         }
@@ -195,7 +207,7 @@ namespace khmz
         void unlock()
         {
             if (!m_owns_lock)
-                throw std::runtime_error("No lock to release at khmz::unique_lock::unlock");
+                khmz_throw(std::runtime_error("No lock to release at khmz::unique_lock::unlock"));
             m_mutex->unlock();
             m_owns_lock = false;
         }
